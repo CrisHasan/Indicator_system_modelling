@@ -54,6 +54,10 @@ plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
 ###############################################
+"""Proper regression of alpha and lambda"""
+
+
+###############################################
 # Calculate the cumulative distribution function (CDF) of the fitted gamma distribution
 cdf_fitted = gamma.cdf(x, a=alpha_param, scale=1/lambda_param)
 # Compute the Kolmogorov-Smirnov statistic to assess the goodness of fit

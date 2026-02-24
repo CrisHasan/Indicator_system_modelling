@@ -183,6 +183,22 @@ plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
 
+#plot the ratio of pdf values between the second and fourth lambda values
+plt.figure(figsize=(12, 8))
+pdf_test_2 = gamma.pdf(x, a=m_0 * lambda_test[1], scale=1/lambda_test[1])
+pdf_test_3 = gamma.pdf(x, a=m_0 * lambda_test[2], scale=1/lambda_test[2])
+pdf_test_4 = gamma.pdf(x, a=m_0 * lambda_test[3], scale=1/lambda_test[3])
+plt.plot(x, pdf_test_4/pdf_test_2, label=f'Ratio of PDF with lambda={lambda_test[3]} to PDF with lambda={lambda_test[1]}', color='purple')
+plt.plot(x, pdf_test_4/pdf_test_3, label=f'Ratio of PDF with lambda={lambda_test[3]} to PDF with lambda={lambda_test[2]}', color='blue')
+plt.plot(x, pdf_test_3/pdf_test_2, label=f'Ratio of PDF with lambda={lambda_test[2]} to PDF with lambda={lambda_test[1]}', color='green')
+plt.xlabel('Equivalised Real Household Income (£)')
+plt.ylabel('Ratio of Income Density Functions')
+plt.title('Ratio of Fitted Gamma PDFs with Different Lambda Values')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
 # plot the cdf of the fitted gamma distribution with different lambda values
 plt.figure(figsize=(12, 8))
 plt.axvline(x=18000, color='black', linestyle='--', label='Poverty Threshold (£18,000)')
@@ -200,6 +216,16 @@ plt.tight_layout()
 plt.show()
 
 
+def lorenz_curve(pdf_dist, x):
+    # CDF gives the cumulative share of population
+    cdf_values = cdf_truncated(pdf_dist)
+    # Calculate the (weighted) cumulative share of income
+    cumulative_income = np.cumsum(pdf_dist * x)
+    # Calculate the normalised cumulative share of income (between 0 and 1)
+    #cumulative_income /= cumulative_income[-1]  
+    return cdf_values, cumulative_income
+
+
 #plot the Lorenz curve for the fitted gamma distribution with different lambda values
 plt.figure(figsize=(12, 8))
 plt.plot([0, 1], [0, 1], color='black', linestyle='--', label='Line of Equality')
@@ -215,3 +241,4 @@ plt.legend()
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
+
