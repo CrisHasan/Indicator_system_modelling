@@ -11,8 +11,12 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request, name="index.html", context={"request": request}
+    )
 
 @router.get("/paper", response_class=HTMLResponse)
 def paper(request: Request):
-    return templates.TemplateResponse("paper.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request, name="paper.html", context={"request": request}
+    )
