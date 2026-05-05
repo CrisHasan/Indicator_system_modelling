@@ -53,52 +53,102 @@ from scipy.special import gammaln  # stable log-gamma for analytic Gini
 #     return 0.0 if (cycle_time < tau - eps) else 1.0
 
 
-def B_pulse_train(t, omega=5.0, tau=1.5, phase=0.0, amp = 1.0):
+import numpy as np
+
+import numpy as np
+
+import numpy as np
+
+def B_pulse_train(t, omega=3.0, tau=1.0, phase=0.0, amp=1.0):
     """
     Trapezoidal wave for farming state.
+
+    Interpretation
+    --------------
+    B(t) = 0 → cover crop (LOW state, no degradation)
+    B(t) = 1 → cash crop (HIGH state, degradation active)
+
+    One full cycle (length = omega) is:
+        LOW plateau → ramp up → HIGH plateau → ramp down
 
     Parameters
     ----------
     t : array-like
-    omega : period
-    tau : duration of LOW state (cover crop)
-    phase : phase shift
-    amp : amplitude (default 1)
+        Time values.
+    omega : float
+        Total length of one cycle.
+    tau : float
+        Duration of LOW plateau (cover crop).
+    phase : float
+        Shifts the signal in time.
+    amp : float
+        Maximum value (default = 1).
 
     Returns
     -------
-    signal in [0, amp]
+    y : array-like
+        Signal in [0, amp].
     """
 
+    # Shift time for phase offset
     t_shift = t - phase
+
+    # Fold time into one repeating cycle [0, omega)
     cycle = np.mod(t_shift, omega)
 
-    ramp = min(tau * 0.25, omega * 0.25)
+    # Duration of the smooth transitions (up and down)
+    ramp = 0.5
 
+    # Output array
     y = np.zeros_like(cycle, dtype=float)
 
-    # Regions (STRICT, no overlap)
+    # --- Sanity check ---
+    # Need space for: LOW + ramp up + HIGH + ramp down
+    if tau + 2 * ramp > omega:
+        raise ValueError(
+            "tau + 2*ramp must be <= omega "
+            "(otherwise no room for HIGH plateau)"
+        )
 
-    # 1. LOW plateau
-    mask_low = cycle < (tau - ramp)
+    # =====================================
+    # Define regions of the trapezoid shape
+    # =====================================
 
-    # 2. RISING edge
-    mask_rise = (cycle >= (tau - ramp)) & (cycle < tau)
+    # 1) LOW plateau (cover crop)
+    # From start of cycle up to tau
+    mask_low = cycle < tau
 
-    # 3. HIGH plateau
-    mask_high = (cycle >= tau) & (cycle < (omega - ramp))
+    # 2) RISING edge (transition 0 → amp)
+    # Linear increase over 'ramp' time
+    mask_rise = (cycle >= tau) & (cycle < tau + ramp)
 
-    # 4. FALLING edge
-    mask_fall = cycle >= (omega - ramp)
+    # 3) HIGH plateau (cash crop / degradation active)
+    # Starts AFTER ramp-up finishes
+    mask_high = (cycle >= tau + ramp) & (cycle < omega - ramp)
 
-    # Assign values
+    # 4) FALLING edge (transition amp → 0)
+    # Last 'ramp' portion of the cycle
+    mask_fall = cycle >= omega - ramp
+
+    # =====================================
+    # Assign values to each region
+    # =====================================
+
+    # LOW plateau → 0
     y[mask_low] = 0.0
 
-    y[mask_rise] = amp * (cycle[mask_rise] - (tau - ramp)) / ramp
+    # RAMP UP → linear increase from 0 to amp
+    y[mask_rise] = amp * (
+        (cycle[mask_rise] - tau) / ramp
+    )
 
+    # HIGH plateau → constant amp
     y[mask_high] = amp
 
-    y[mask_fall] = amp * (1 - (cycle[mask_fall] - (omega - ramp)) / ramp)
+    # RAMP DOWN → linear decrease from amp to 0
+    y[mask_fall] = amp * (
+        1 - (cycle[mask_fall] - (omega - ramp)) / ramp
+    )
 
     return y
 
@@ -402,7 +452,7 @@ def simulate_multi_land(
 
     # production / demand conversion
     harvest_fraction: float = 1.0,
-    calories_per_unit: float = 1_100_000,
+    calories_per_unit: float = 255_000,
     calorie_per_person: float = 700_000,
 
     # land area
@@ -417,7 +467,7 @@ def simulate_multi_land(
         raise ValueError("simulate_multi_land: need at least one LandConfig")
 
     n_lands = len(lands)
-    t_eval = np.linspace(0.0, T_max, int(n_points))
+    t_eval = np.linspace(0.0, T_max, int(n_points*T_max))
 
     soils = np.zeros((n_lands, t_eval.size))
     degradations = np.zeros((n_lands, t_eval.size))
@@ -576,6 +626,8 @@ def simulate_multi_land(
     rolling_total_production = rolling_mean(total_production, temp_cycle_rolling)
     calorie_production = rolling_total_production * float(calories_per_unit)
 
+
+
     self_sufficiency_ratio = 100.0 * (
         calorie_production / np.maximum(food_consumption, 1e-12)
     )
@@ -590,10 +642,15 @@ def simulate_multi_land(
     income_x20 = gamma.ppf(0.20, a=k_shape, scale=scale)
 
     # ---- food price index Q(t) ----
-    food_price_index = food_consumption / np.maximum(calorie_production, 1e-12)
+    Q_0 = 5000 # baseline price index
+    R_0 = 120 # baseline self-sufficiency ratio (%)
+    I_0 = 1.0 # baseline inflation index
+    beta_q = Q_0 * R_0 * I_0
+    # food_price_index = beta_q *  food_consumption / (np.maximum(inflation_index, 1e-12)*np.maximum(calorie_production, 1e-12))
+    food_price_index = beta_q * 1 /(np.maximum(self_sufficiency_ratio, 1e-12) * np.maximum(inflation_index, 1e-12))
 
     # ---- food security index Z(t) ----
-    food_security_index = food_price_index / np.maximum(income_x20, 1e-12)
+    food_security_index = 100 * food_price_index / np.maximum(income_x20, 1e-12)
 
     # ---- weighted soil ----
     if land_fractions_arr.sum() > 0:
