@@ -1,0 +1,180 @@
+{
+  "exported_at": "2026-05-12T11:01:03.498Z",
+  "scenario_index": 1,
+  "scenario_name": "Scenario 2",
+  "mode": "all_plots",
+  "selected_plot": "inc",
+  "scenario": {
+    "name": "Scenario 2",
+    "globals": {
+      "tmax": 50,
+      "pop": 0.02,
+      "n": 100,
+      "selectedPlot": "inc",
+      "donutCmap": "Viridis",
+      "rollOn": "off",
+      "rollYears": 3,
+      "muGrow": 0.005,
+      "infl": 0.017,
+      "lamRate": 0,
+      "allPlotsMode": true
+    },
+    "lands": [
+      {
+        "name": "Land 1",
+        "share": 33.33334,
+        "alpha": 0.2,
+        "s0": 0.8,
+        "recovery": "Logistic alpha(S)",
+        "alpha_max": 0.25,
+        "sT": 0.2,
+        "rho": 50,
+        "pmax": 10,
+        "scenario_name": "Fertiliser parabola",
+        "dconst": 0.1,
+        "F": 1,
+        "zeta": 1,
+        "D0": 1.2,
+        "omega": 3,
+        "tau": 1,
+        "phase": 1,
+        "EH": 1.6,
+        "ES": 1.28
+      },
+      {
+        "name": "Land 2",
+        "share": 33.33333,
+        "alpha": 0.2,
+        "s0": 0.8,
+        "recovery": "Logistic alpha(S)",
+        "alpha_max": 0.25,
+        "sT": 0.2,
+        "rho": 50,
+        "pmax": 10,
+        "scenario_name": "Fertiliser parabola",
+        "dconst": 0.1,
+        "F": 1.35,
+        "zeta": 1,
+        "D0": 1.2,
+        "omega": 6,
+        "tau": 1,
+        "phase": 2,
+        "EH": 1.6,
+        "ES": 1.28
+      },
+      {
+        "name": "Land 3",
+        "share": 33.33333,
+        "alpha": 0.2,
+        "s0": 0.8,
+        "recovery": "Logistic alpha(S)",
+        "alpha_max": 0.25,
+        "sT": 0.2,
+        "rho": 50,
+        "pmax": 10,
+        "scenario_name": "Fertiliser parabola",
+        "dconst": 0.1,
+        "F": 1.35,
+        "zeta": 1,
+        "D0": 1.2,
+        "omega": 10,
+        "tau": 1,
+        "phase": 4,
+        "EH": 1.6,
+        "ES": 1.28
+      }
+    ]
+  },
+  "visible_plots_summary": [
+    {
+      "key": "soil",
+      "title": "Soil",
+      "n_series": 4,
+      "n_points": 5000
+    },
+    {
+      "key": "prod",
+      "title": "Production",
+      "n_series": 5,
+      "n_points": 5000
+    },
+    {
+      "key": "pop",
+      "title": "Population",
+      "n_series": 2,
+      "n_points": 5000
+    },
+    {
+      "key": "cal_demand",
+      "title": "Calorie demand",
+      "n_series": 2,
+      "n_points": 5000
+    },
+    {
+      "key": "ssr",
+      "title": "Self-sufficiency",
+      "n_series": 2,
+      "n_points": 5000
+    },
+    {
+      "key": "inc",
+      "title": "Real income",
+      "n_series": 2,
+      "n_points": 5000
+    },
+    {
+      "key": "deg",
+      "title": "Degradation",
+      "n_series": 5,
+      "n_points": 5000
+    },
+    {
+      "key": "emis",
+      "title": "Net emissions",
+      "n_series": 2,
+      "n_points": 5000
+    },
+    {
+      "key": "infl",
+      "title": "Inflation index",
+      "n_series": 1,
+      "n_points": 5000
+    },
+    {
+      "key": "lambda",
+      "title": "Redistribution λ",
+      "n_series": 1,
+      "n_points": 5000
+    },
+    {
+      "key": "palma",
+      "title": "Palma ratio",
+      "n_series": 2,
+      "n_points": 5000
+    },
+    {
+      "key": "gini",
+      "title": "Gini coefficient",
+      "n_series": 2,
+      "n_points": 5000
+    },
+    {
+      "key": "food_price",
+      "title": "Food price index",
+      "n_series": 2,
+      "n_points": 5000
+    },
+    {
+      "key": "food_sec",
+      "title": "Food security",
+      "n_series": 2,
+      "n_points": 5000
+    },
+    {
+      "key": "inc_pdf",
+      "title": "Income distribution",
+      "n_series": 1,
+      "n_points": 400
+    }
+  ]
+}
