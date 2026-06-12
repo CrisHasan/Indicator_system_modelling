@@ -9,8 +9,11 @@ No Streamlit or plotting here.
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+
+
 import numpy as np
 from scipy import signal
+from scipy.signal import savgol_filter
 from scipy.integrate import solve_ivp
 from scipy.stats import gamma
 from scipy.special import gammaln  # stable log-gamma for analytic Gini
@@ -53,15 +56,61 @@ from scipy.special import gammaln  # stable log-gamma for analytic Gini
 #     return 0.0 if (cycle_time < tau - eps) else 1.0
 
 
-import numpy as np
+def savgol_smooth_years(
+    y,
+    t,
+    window_years: float = 3.0,
+    polyorder: int = 2,
+    preserve_initial: bool = True,
+):
+    y = np.asarray(y, dtype=float)
+    t = np.asarray(t, dtype=float)
 
-import numpy as np
+    if y.size < 5:
+        return y.copy()
 
-import numpy as np
+    dt = float(np.median(np.diff(t)))
+    if dt <= 0:
+        return y.copy()
 
-def B_pulse_train(t, omega=3.0, tau=1.0, phase=0.0, amp=1.0):
+    # Convert a physical window in years to a number of samples
+    window_length = int(round(window_years / dt))
+
+    # Savitzky-Golay requires an odd window length
+    if window_length % 2 == 0:
+        window_length += 1
+
+    # Window must be larger than polyorder
+    min_window = polyorder + 2
+    if min_window % 2 == 0:
+        min_window += 1
+
+    window_length = max(window_length, min_window)
+
+    # Window cannot exceed length of data
+    if window_length >= y.size:
+        window_length = y.size if y.size % 2 == 1 else y.size - 1
+
+    if window_length <= polyorder or window_length < 3:
+        return y.copy()
+
+    y_smooth = savgol_filter(
+        y,
+        window_length=window_length,
+        polyorder=polyorder,
+        mode="interp",
+    )
+
+    # Optional: force the plotted curve to respect the exact initial value
+    if preserve_initial:
+        y_smooth[0] = y[0]
+
+    return y_smooth
+
+
+def B_pulse_train(t, omega=3.0, tau=1.0, phase=0.0, amp = 1.0):
     """
-    Trapezoidal wave for farming state.
+    Simple pulse train for farming state.
 
     Interpretation
     --------------
@@ -69,88 +118,115 @@ def B_pulse_train(t, omega=3.0, tau=1.0, phase=0.0, amp=1.0):
     B(t) = 1 → cash crop (HIGH state, degradation active)
 
     One full cycle (length = omega) is:
-        LOW plateau → ramp up → HIGH plateau → ramp down
-
-    Parameters
-    ----------
-    t : array-like
-        Time values.
-    omega : float
-        Total length of one cycle.
-    tau : float
-        Duration of LOW plateau (cover crop).
-    phase : float
-        Shifts the signal in time.
-    amp : float
-        Maximum value (default = 1).
-
-    Returns
-    -------
-    y : array-like
-        Signal in [0, amp].
+        LOW plateau → HIGH plateau
     """
+ # Shift time
+    t_shift = np.asarray(t) - phase
 
-    # Shift time for phase offset
-    t_shift = t - phase
-
-    # Fold time into one repeating cycle [0, omega)
+    # Fold into repeating interval [0, omega)
     cycle = np.mod(t_shift, omega)
 
-    # Duration of the smooth transitions (up and down)
-    ramp = 0.5
+    low = 0.1
+    high = amp
 
-    # Output array
-    y = np.zeros_like(cycle, dtype=float)
-
-    # --- Sanity check ---
-    # Need space for: LOW + ramp up + HIGH + ramp down
-    if tau + 2 * ramp > omega:
-        raise ValueError(
-            "tau + 2*ramp must be <= omega "
-            "(otherwise no room for HIGH plateau)"
-        )
-
-    # =====================================
-    # Define regions of the trapezoid shape
-    # =====================================
-
-    # 1) LOW plateau (cover crop)
-    # From start of cycle up to tau
-    mask_low = cycle < tau
-
-    # 2) RISING edge (transition 0 → amp)
-    # Linear increase over 'ramp' time
-    mask_rise = (cycle >= tau) & (cycle < tau + ramp)
-
-    # 3) HIGH plateau (cash crop / degradation active)
-    # Starts AFTER ramp-up finishes
-    mask_high = (cycle >= tau + ramp) & (cycle < omega - ramp)
-
-    # 4) FALLING edge (transition amp → 0)
-    # Last 'ramp' portion of the cycle
-    mask_fall = cycle >= omega - ramp
-
-    # =====================================
-    # Assign values to each region
-    # =====================================
-
-    # LOW plateau → 0
-    y[mask_low] = 0.0
-
-    # RAMP UP → linear increase from 0 to amp
-    y[mask_rise] = amp * (
-        (cycle[mask_rise] - tau) / ramp
-    )
-
-    # HIGH plateau → constant amp
-    y[mask_high] = amp
-
-    # RAMP DOWN → linear decrease from amp to 0
-    y[mask_fall] = amp * (
-        1 - (cycle[mask_fall] - (omega - ramp)) / ramp
-    )
+    # LOW for cycle < tau, HIGH otherwise
+    y = np.where(cycle < tau, low, high)
 
     return y
+
+
+# def B_pulse_train(t, omega=3.0, tau=1.0, phase=0.0, amp=1.0):
+#     """
+#     Trapezoidal wave for farming state.
+
+#     Interpretation
+#     --------------
+#     B(t) = 0 → cover crop (LOW state, no degradation)
+#     B(t) = 1 → cash crop (HIGH state, degradation active)
+
+#     One full cycle (length = omega) is:
+#         LOW plateau → ramp up → HIGH plateau → ramp down
+
+#     Parameters
+#     ----------
+#     t : array-like
+#         Time values.
+#     omega : float
+#         Total length of one cycle.
+#     tau : float
+#         Duration of LOW plateau (cover crop).
+#     phase : float
+#         Shifts the signal in time.
+#     amp : float
+#         Maximum value (default = 1).
+
+#     Returns
+#     -------
+#     y : array-like
+#         Signal in [0, amp].
+#     """
+
+#     # Shift time for phase offset
+#     t_shift = t - phase
+
+#     # Fold time into one repeating cycle [0, omega)
+#     cycle = np.mod(t_shift, omega)
+
+#     # Duration of the smooth transitions (up and down)
+#     ramp = 0.5
+
+#     # Output array
+#     y = np.zeros_like(cycle, dtype=float)
+
+#     # --- Sanity check ---
+#     # Need space for: LOW + ramp up + HIGH + ramp down
+#     if tau + 2 * ramp > omega:
+#         raise ValueError(
+#             "tau + 2*ramp must be <= omega "
+#             "(otherwise no room for HIGH plateau)"
+#         )
+
+#     # =====================================
+#     # Define regions of the trapezoid shape
+#     # =====================================
+
+#     # 1) LOW plateau (cover crop)
+#     # From start of cycle up to tau
+#     mask_low = cycle < tau
+
+#     # 2) RISING edge (transition 0 → amp)
+#     # Linear increase over 'ramp' time
+#     mask_rise = (cycle >= tau) & (cycle < tau + ramp)
+
+#     # 3) HIGH plateau (cash crop / degradation active)
+#     # Starts AFTER ramp-up finishes
+#     mask_high = (cycle >= tau + ramp) & (cycle < omega - ramp)
+
+#     # 4) FALLING edge (transition amp → 0)
+#     # Last 'ramp' portion of the cycle
+#     mask_fall = cycle >= omega - ramp
+
+#     # =====================================
+#     # Assign values to each region
+#     # =====================================
+
+#     # LOW plateau → 0
+#     y[mask_low] = 0.0
+
+#     # RAMP UP → linear increase from 0 to amp
+#     y[mask_rise] = amp * (
+#         (cycle[mask_rise] - tau) / ramp
+#     )
+
+#     # HIGH plateau → constant amp
+#     y[mask_high] = amp
+
+#     # RAMP DOWN → linear decrease from amp to 0
+#     y[mask_fall] = amp * (
+#         1 - (cycle[mask_fall] - (omega - ramp)) / ramp
+#     )
+
+#     return y
 
 # ------------------------------------------------------------
 # Degradation functions
@@ -245,6 +321,52 @@ def h_yield(F: float, xi: float, psi: float) -> float:
 
 
 # ------------------------------------------------------------
+# Reinvestment function
+# ------------------------------------------------------------
+
+def J_investment_func(
+    pop,
+    C,
+    P_tilde,
+    I,
+    nu: float,
+    eta: float,
+    beta_q: float,
+    theta: float,
+    eps: float = 1e-12,
+):
+    """
+    Reinvestment potential J(t).
+
+    Mathematical form:
+        J(t) = -nu/2 + sqrt(nu^2/4
+               + nu*eta*beta_q*theta*U(t)*C(t) / (I(t)*P_tilde(t)))
+
+    Notes
+    -----
+    - P_tilde is the baseline soil-driven production, before reinvestment.
+    - C food consumption per capita per year
+    - I inflatio index 
+    - pop population at time t
+    """
+    pop = np.asarray(pop, dtype=float)
+    C = np.asarray(C, dtype=float)
+    P_tilde = np.maximum(np.asarray(P_tilde, dtype=float), eps)
+    I = np.maximum(np.asarray(I, dtype=float), eps)
+
+    nu = float(nu)
+    eta = float(eta)
+    beta_q = float(beta_q)
+    theta = float(theta)
+
+    half_nu = nu / 2.0
+    inside = half_nu**2 + (nu * eta * beta_q * theta * pop * C) / (I * P_tilde)
+    inside = np.maximum(inside, 0.0)
+
+    return -half_nu + np.sqrt(inside)
+
+
+# ------------------------------------------------------------
 # Income distribution helpers
 # ------------------------------------------------------------
 
@@ -292,8 +414,10 @@ class SimulationResult:
     soils: np.ndarray
     degradations: np.ndarray
 
-    productions: np.ndarray              # (n_lands, n_times) tonnes/yr
-    total_production: np.ndarray         # (n_times,) tonnes/yr
+    productions: np.ndarray              # (n_lands, n_times) tonnes/yr, baseline/soil-driven
+    total_production: np.ndarray         # (n_times,) tonnes/yr, baseline/soil-driven P_tilde
+    total_production_real: np.ndarray    # (n_times,) tonnes/yr, boosted production P
+    J_investment: np.ndarray             # (n_times,) reinvestment potential J(t)
     weighted_soil: np.ndarray
 
     land_names: List[str]
@@ -323,7 +447,7 @@ class SimulationResult:
     income_x: Optional[np.ndarray] = None            # (n_x,)
     income_pdf: Optional[np.ndarray] = None          # (n_times, n_x)
     food_price_index: Optional[np.ndarray] = None   # (n_times,)
-    food_security_index: Optional[np.ndarray] = None  # (n_times,)
+    food_insecurity_index: Optional[np.ndarray] = None  # (n_times,)
 
 # ------------------------------------------------------------
 # Core solver
@@ -461,13 +585,28 @@ def simulate_multi_land(
     # GLOBAL defaults
     E_H_default: float = 1.6,
     E_S_default: float = 1.28,
+
+    # Baseline constants for food price equation
+    Q_0: float = 5000.0,
+    R_0: float = 120.0,
+    I_0: float = 1.0,
+
+    # Reinvestment parameters
+    theta: float = 0.51,
+    eta: float = 0.05,
+    U_0: float | None = None,
+    J_0: float | None = None,
+    nu: float | None = None,
+
+
 ) -> SimulationResult:
 
     if len(lands) == 0:
         raise ValueError("simulate_multi_land: need at least one LandConfig")
 
     n_lands = len(lands)
-    t_eval = np.linspace(0.0, T_max, int(n_points*T_max))
+    n_steps = int(round(float(n_points) * float(T_max)))
+    t_eval = np.linspace(0.0, float(T_max), n_steps + 1)
 
     soils = np.zeros((n_lands, t_eval.size))
     degradations = np.zeros((n_lands, t_eval.size))
@@ -618,15 +757,48 @@ def simulate_multi_land(
 
     # ---- food consumption / demand ----
     # Food consumption is taken to be calorie demand.
-    food_consumption = population * float(calorie_per_person)
+    food_consumption = population * float(calorie_per_person) 
+
+    # ---- reinvestment boost ----
+    # total_production is P_tilde(t): baseline production from the soil/land model.
+    # total_production_real is P(t): realised production after reinvestment.
+    # beta_q = float(Q_0) * float(R_0) * float(I_0) / 100
+    beta_q = total_production[0]*(1.01) / (1000 * calorie_per_person / calories_per_unit)  # scale to current production for more dynamic response
+
+    if U_0 is None:
+        U_0 = 2.55e6 / theta
+
+    if J_0 is None:
+        J_0 = eta * theta * U_0 * Q_0
+
+    if nu is None:
+        nu = J_0 / 0.01
+
+    J_investment_series = J_investment_func(
+        pop=population,
+        C=food_consumption / calories_per_unit,
+        P_tilde=total_production,
+        I=inflation_index,
+        nu=nu,
+        eta=eta,
+        beta_q=beta_q,
+        theta=theta,
+    )
+
+    # Debug system prints
+    # print(f"J_investment_series: {J_investment_series}")
+    # print(f"U_0: {U_0}")
+    # print(f"Q_0: {Q_0}")
+    # print(f"J_0: {J_0}")
+    # print(f"nu: {nu} ")
+
+    total_production_real = total_production * (1.0 + J_investment_series / float(nu))
 
     # ---- self-sufficiency ratio ----
-    # Implemented as rolling mean of total production converted to calories
-    temp_cycle_rolling = max(1, int(T_max))
-    rolling_total_production = rolling_mean(total_production, temp_cycle_rolling)
-    calorie_production = rolling_total_production * float(calories_per_unit)
-
-
+    # Use instantaneous boosted production.
+    # Important: this preserves the true t=0 value and makes results independent
+    # of the plotting/time resolution n_points.
+    calorie_production = total_production_real * float(calories_per_unit)
 
     self_sufficiency_ratio = 100.0 * (
         calorie_production / np.maximum(food_consumption, 1e-12)
@@ -635,22 +807,22 @@ def simulate_multi_land(
     # ---- harvest ----
     hf = float(np.clip(harvest_fraction, 0.0, 1.0))
     harvest_per_land = hf * productions
-    total_harvest = harvest_per_land.sum(axis=0)
+    # The reinvestment boost is applied only at total-system level, not per land.
+    total_harvest = hf * total_production_real
 
     total_emissions = emissions.sum(axis=0)
 
     income_x20 = gamma.ppf(0.20, a=k_shape, scale=scale)
 
     # ---- food price index Q(t) ----
-    Q_0 = 5000 # baseline price index
-    R_0 = 120 # baseline self-sufficiency ratio (%)
-    I_0 = 1.0 # baseline inflation index
-    beta_q = Q_0 * R_0 * I_0
-    # food_price_index = beta_q *  food_consumption / (np.maximum(inflation_index, 1e-12)*np.maximum(calorie_production, 1e-12))
-    food_price_index = beta_q * 1 /(np.maximum(self_sufficiency_ratio, 1e-12) * np.maximum(inflation_index, 1e-12))
+    # beta_q was already computed above for the reinvestment equation.
+    food_price_index = 100 * beta_q / (
+        np.maximum(self_sufficiency_ratio, 1e-12)
+        * np.maximum(inflation_index, 1e-12)
+    )
 
-    # ---- food security index Z(t) ----
-    food_security_index = 100 * food_price_index / np.maximum(income_x20, 1e-12)
+    # ---- food insecurity index Z(t) ----
+    food_insecurity_index = 100 * food_price_index / np.maximum(income_x20, 1e-12)
 
     # ---- weighted soil ----
     if land_fractions_arr.sum() > 0:
@@ -664,6 +836,8 @@ def simulate_multi_land(
         degradations=degradations,
         productions=productions,
         total_production=total_production,
+        total_production_real=total_production_real,
+        J_investment=J_investment_series,
         weighted_soil=weighted_soil,
         land_names=land_names,
         land_fractions=land_fractions_arr,
@@ -692,5 +866,5 @@ def simulate_multi_land(
         income_x=income_x,
         income_pdf=income_pdf,
         food_price_index=food_price_index,
-        food_security_index=food_security_index,
+        food_insecurity_index=food_insecurity_index,
     )
