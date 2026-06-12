@@ -79,6 +79,7 @@ plt.show()
 # Calculate the expected value (mean) and variance of the income distribution
 expected_value = (x * income_data['Probability Density']).sum()
 variance = ((x - expected_value) ** 2 * income_data['Probability Density']).sum()
+mu_param = expected_value
 # To fit it with a gamma distribution we can approximate lambda as mean/variance, and alpha as mean*lambda
 lambda_param = expected_value / variance
 alpha_param = expected_value * lambda_param
