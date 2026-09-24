@@ -16,7 +16,7 @@ plt.rcParams['axes.titlesize'] = 9
 plt.rcParams['axes.labelsize'] = 9
 plt.rcParams['xtick.labelsize'] = 7
 plt.rcParams['ytick.labelsize'] = 7
-baseline_linewidth = 1.7
+baseline_linewidth = 2.0 #1.7
 ###################################
 os.chdir('/Users/cris.hasan/Desktop/online_github_repositories/Indicator_system_modelling/scenario_plots/baseline_scenario/')  
 file = 'Scenario_2_visible_plot_data_20260512_120059.csv'

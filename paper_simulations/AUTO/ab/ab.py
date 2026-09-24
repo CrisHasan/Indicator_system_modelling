@@ -1,0 +1,27 @@
+source "$HOME/auto-07p/cmds/auto.env.sh"
+cd /Users/cris.hasan/Desktop/online_github_repositories/Indicator_system_modelling/paper_simulations/AUTO
+auto
+
+print "\n***Generate starting data***"
+start=run(e='ab',c='ab.1')
+
+print "\n***Compute stationary solution families***"
+ab = []
+for solution in start():
+    ab = ab + run(solution,c='ab.2')
+
+print "\n***Relabel and save the output files***"
+ab=rl(ab)
+sv(ab,'ab')
+
+print "\n***Compute periodic solution families***"
+for solution in ab("HB"):
+    ab = ab + run(solution,c='ab.3')
+
+print "\n***Relabel and save the output files***"
+ab=rl(ab)
+sv(ab,'ab')
+
+print "\n***Clean the directory***"
+cl()
+

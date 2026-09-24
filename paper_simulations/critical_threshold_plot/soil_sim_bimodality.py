@@ -242,7 +242,6 @@ plt.plot(new_S0_grid, auc_values, linewidth=1.5, color="blue", label=r"Objective
 plt.axvline(x=Scrit_est, color="crimson", linestyle="--", linewidth=1.2, label=r"Estimated $S_{\mathrm{crit}}$")
 plt.xlabel(r"Initial soil quality, $S_0$")
 plt.ylabel(r"$\int_0^{T} |S(t) - S_0| dt$")
-plt.xlim(S0_grid[0], S0_grid[-1])
 plt.legend()
 plt.tight_layout()
 plt.show()

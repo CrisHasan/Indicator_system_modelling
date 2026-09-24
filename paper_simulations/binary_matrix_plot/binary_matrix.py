@@ -86,3 +86,38 @@ plt.yticks(np.arange(0, N) + 0.5, range(1, N + 1))
 plt.tight_layout()
 plt.savefig('binary_mode_plot.eps', bbox_inches='tight')
 plt.show()  
+
+# Plot B of the first land parcels over time
+plt.figure(figsize=(4, 2.5), dpi=180)
+plt.plot(t_array, B[0, :], linewidth=baseline_linewidth)
+plt.xlabel(r'$t$')
+plt.ylabel(r'$\mathcal{B}(t,0.3)$')
+plt.xlim(0, 10)
+plt.ylim(0, 1)
+plt.tight_layout()
+plt.savefig('binary_mode_over_time_plot.eps', bbox_inches='tight') 
+plt.show()
+###########
+# Generate B for a fixed phase phi = 0.2 and tau = 0.3
+phi_fixed = 0.2
+tau_fixed = 0.3
+B_fixed = np.zeros(total_steps)
+for idx, t in enumerate(t_array):
+    j = int(np.floor(t))
+    phase = phi_fixed
+    condition_val = t - j - phase
+    if condition_val >= 0 and condition_val < tau_fixed:
+        B_fixed[idx] = 0.1
+    else:
+        B_fixed[idx] = 0.9
+
+# Plot B_fixed over time
+plt.figure(figsize=(4, 2.5), dpi=180)
+plt.plot(t_array, B_fixed, linewidth=baseline_linewidth)
+plt.xlabel(r'$t$')
+plt.ylabel(r'$\mathcal{B}(t,0.3)$')
+plt.xlim(0, 10)
+plt.ylim(0, 1)
+plt.tight_layout()
+plt.savefig('binary_mode_fixed_phase_plot.eps', bbox_inches='tight')
+plt.show()

@@ -1,0 +1,10 @@
+unames = {1:'S', 2:'time'}
+parnames = {1: 'F', 2: 'tau', 3: 'S0', 4: 'S1', 5: 'delta', 6: 'B_high', 7: 'B_low', 8: 'drift', 11: 'T'}
+NDIM=  2, IPS =   4, IRS =   0, ILP =   0
+ICP =  ['T', 'S1', 'S0']
+NTST= 800, NCOL=   4, IAD =   3, ISP =   1, ISW = 1, IPLT= 0, NBC= 3, NINT= 0
+NMX=  1200, NPR= 1200, MXBF=   0, IID =   2, ITMX= 8, ITNW= 5, NWTN= 3, JAC= 0
+EPSL= 1e-07, EPSU = 1e-07, EPSS = 1e-05
+DS  = 0.01, DSMIN= 1e-09, DSMAX=  1.0, IADS=   1
+NPAR = 11, THL =  {}, THU =  {}
+UZR =  {}, UZSTOP = {'T': 50.0}
