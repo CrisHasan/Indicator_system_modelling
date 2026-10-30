@@ -49,6 +49,22 @@ for i, tau in enumerate(tau_lower_range):
 pl(tau_lower[-1])
 cl()
 ############################################################
+# Get individual curves for individual S0 values
+# Unfortunately, always runs into an 'MX point' error
+S_0 = 0.3
+shift_3 = run(first('UZ1'), DS=-0.001, ICP = ['F', 'S0', 'S1'], UZSTOP = {'S0': S_0})
+s0_3 = run(shift_3('UZ1'), ICP = ['F', 'tau', 'S1'], DS=-0.005, ITMX= 40)
+
+S_0 = 0.4
+shift_4 = run(first('UZ1'), DS=-0.001, ICP = ['F', 'S0', 'S1'], UZSTOP = {'S0': S_0})
+s0_4 = run(shift_4('UZ1'), ICP = ['F', 'tau', 'S1'], DS=-0.005, ITMX= 40)
+
+S_0 = 0.5
+shift_5 = run(first('UZ1'), DS=-0.001, ICP = ['F', 'S0', 'S1'], UZSTOP = {'S0': S_0})
+s0_5 = run(shift_5('UZ1'), ICP = ['F', 'tau', 'S1'], DS=-0.005, ITMX= 40)
+
+pl(s0_3 + s0_4 + s0_5)
+############################################################
 nearby_0 = run(s0('UZ1'), NTST = 3000, NPR = 1200, DS=-0.001, DSMAX = 0.1, ICP = ['delta', 'S0', 'S1'], UZSTOP =  {'delta': 0.0})
 nearby_l = run(nearby_0('UZ1'), NPR = 1, NMX= 10, DS = -0.01, DSMAX = 0.1, ICP = ['S0', 'S1', 'delta'])
 nearby_r = run(nearby_0('UZ1'), NPR = 1, NMX= 10, DS = 0.01, DSMAX = 0.1, ICP = ['S0', 'S1', 'delta'])

@@ -296,11 +296,11 @@ U_0 = 2.55e6 / theta
 nu = eta_b * theta * U_0 * Q_b / r_0
 income_x_max = float(200000.0)
 income_nx = int(400)
-[S0_min, S0_max] = [0.2, 0.8]
+[S0_min, S0_max] = [0.05, 0.87]
 recovery_params = {"alpha_max": alpha_max, "rho": rho, "S_T": S_T}
 ###############################################
 T_max = float(50.0)
-n_lands = int(10)
+n_lands = int(100)
 tau = tau_matrix(n_lands, int(T_max), mean_tau, sd_tau)
 phi = phi_matrix(n_lands, int(T_max), tau)
 dt = float(0.01)
@@ -450,20 +450,39 @@ food_insecurity_index_moving_avg = 100 * food_price_index_moving_avg / income_x2
 # Annual food insecurity index
 food_insecurity_index_annual = annual_series(food_insecurity_index_moving_avg, dt)
 ###############################
+# Iterative method for finding the critical soil quality threshold
+diff_array = []
+for land_ind in range(n_lands - 1):
+    # Iterate over pairs of consecutive lands, and find the difference between their soil quality at the last time step
+    diff_array.append(soils[land_ind + 1, -1] - soils[land_ind, -1])
+
+# Find the index of the maximum difference
+max_diff_index = np.argmax(diff_array)
+
+# Find the pairs of consecutive lands that have the maximum difference in soil quality at the last time step
+# Print the initial conditions of the lands with the maximum difference
+print(soils[max_diff_index, 0], soils[max_diff_index + 1, 0], diff_array[max_diff_index])
+# Now manually take the pairs and repeat the process a few times, by updating [S0_min, S0_max],
+# and we get around 0.20362
+# Obviously this is a lazy way to do it, but we just want to approxiamte the critical soil quality threshold to a few decimal places
+###############################
 # plot the soil quality index for all lands
 plt.figure(figsize=(2.8, 2.5), dpi=150)
 plt.plot(t_eval, soils[0, :], linewidth=1.0, color='grey', alpha=0.5, label='Individual')
 plt.plot(t_eval, soils[0, :], linewidth=2.0, color='gray', alpha=0.5)
-for land_ind in range(1, n_lands):
+for land_ind in range(n_lands):
     plt.plot(t_eval, soils[land_ind, :], linewidth=2.0, color='gray', alpha=0.5)
-plt.plot(t_eval, mean_soil_quality, linewidth=baseline_linewidth, color='blue', label='Mean')
+    print(soils[land_ind, 0])
+#plt.plot(t_eval, mean_soil_quality, linewidth=baseline_linewidth, color='blue', label='Mean')
 #plt.plot(t_eval, np.median(soils, axis=0), linewidth=baseline_linewidth, color='red', label='Median')
+plt.axhline(y=0.20362, color='red', linestyle='--', linewidth=2.0, label='Critical Soil Quality Threshold')
+plt.text(0.55, 0.24, r'$S_{crit}$', transform=plt.gca().transAxes, fontsize=10)
 plt.text(0.02, 0.93, '(a)', transform=plt.gca().transAxes, fontsize=10)
 plt.xlabel(r"Time [yr]")
 plt.ylabel(r"Soil Health Index")
 plt.xlim(0, T_max)
 plt.ylim(0, 1)
-plt.legend()
+#plt.legend()
 plt.tight_layout()
 plt.savefig("soil_initial_conditions_ensemble.pdf", bbox_inches='tight')
 plt.savefig("soil_initial_conditions_ensemble.eps", bbox_inches='tight')

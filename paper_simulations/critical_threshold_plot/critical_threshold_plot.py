@@ -1,10 +1,13 @@
+from matplotlib.colors import LogNorm
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import matplotlib
 import os
 from scipy.optimize import brentq
 from scipy.interpolate import griddata
 from mpl_toolkits.mplot3d import Axes3D
+from auto_loaders import load_time_S_blocks, parse_time_S_blocks
 ################################################
 #set the default font for all figures
 font_families = matplotlib.font_manager.findSystemFonts(fontpaths=None, fontext='ttf')
@@ -76,73 +79,6 @@ def load_F_S0_from_auto_b(path):
                 continue
 
     return np.array(F_vals), np.array(S0_vals)
-
-def load_time_S_blocks(path):
-    """
-    Load the first two columns (time, S) from every solution block in an
-    AUTO nearby_all / solution file.
-
-    Returns
-    -------
-    time_array : np.ndarray
-        Shape (n_rows, n_solutions)
-    S_array : np.ndarray
-        Shape (n_rows, n_solutions)
-    """
-    time_blocks = []
-    S_blocks = []
-
-    current_time = []
-    current_S = []
-    in_block = False
-
-    with open(path, "r") as f:
-        for line in f:
-            parts = line.split()
-            if not parts:
-                continue
-
-            # Solution blocks begin with a metadata/header line containing
-            # only integer tokens.
-            if len(parts) == 16:
-                if in_block and current_time:
-                    time_blocks.append(current_time)
-                    S_blocks.append(current_S)
-
-                current_time = []
-                current_S = []
-                in_block = True
-                continue
-
-            # Some AUTO files include short separator lines between blocks.
-            if len(parts) == 3 and all(token.lstrip("+-").isdigit() for token in parts):
-                if in_block and current_time:
-                    time_blocks.append(current_time)
-                    S_blocks.append(current_S)
-                    current_time = []
-                    current_S = []
-                    in_block = False
-                continue
-
-            if not in_block:
-                continue
-
-            try:
-                t_val = float(parts[0])
-                s_val = float(parts[1])
-            except ValueError:
-                continue
-
-            current_time.append(t_val)
-            current_S.append(s_val)
-
-    if in_block and current_time:
-        time_blocks.append(current_time)
-        S_blocks.append(current_S)
-
-    time_array = np.column_stack(time_blocks)
-    S_array = np.column_stack(S_blocks)
-    return time_array, S_array
 
 
 ###############################################
@@ -471,14 +407,20 @@ plt.show()
 all_F = []
 all_tau = []
 all_S0 = []
+min_curve = []
+max_curve = []
 for tau, (F_tau, S0_tau) in auto_bifurcation_data.items():
     all_F.extend(F_tau)
     all_tau.extend([tau / 100.0] * len(F_tau))
     all_S0.extend(S0_tau)
+    min_curve.append((np.min(F_tau), tau / 100.0))
+    max_curve.append((np.max(F_tau), tau / 100.0))
 
 all_F = np.array(all_F)
 all_tau = np.array(all_tau)
 all_S0 = np.array(all_S0)
+min_curve = np.array(min_curve)
+max_curve = np.array(max_curve)
 
 xi_all = np.linspace(0, 3, 300)
 yi_all = np.linspace(0.0, 1.0, 150)
@@ -500,19 +442,68 @@ plt.plot([0,3], [0, 0], color='black', linestyle='-', linewidth=baseline_linewid
 plt.plot([0,3], [1, 1], color='black', linestyle='-', linewidth=baseline_linewidth)
 plt.plot(F_values_tau0, analytical_tau0, color='black', linewidth=baseline_linewidth, linestyle='-', label=r'$\tau = 0$')
 plt.plot(F_values_tau1, analytical_tau1, color='black', linewidth=baseline_linewidth, linestyle='-', label=r'$\tau = 1$')
-cbar = plt.colorbar(contour_all, label=r'Resting Period, $\tau$')
-cbar.set_ticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-
 plt.text(0.85, 0.81, r'No', color='black', fontsize=10)
 plt.text(0.75, 0.71, r'tipping', color='black', fontsize=10)
+plt.text(1.45, 0.61, r'Partial', color='black', fontsize=10)
+plt.text(1.40, 0.51, r'tipping', color='black', fontsize=10)
 plt.text(2.2, 0.09, r'Tipping', color='black', fontsize=10)
-plt.xlabel(r'Fertiliser Use, $F$')
-plt.ylabel(r'Critical Threshold, $S_{crit}(F,\tau)$')
 plt.xlim(0, 3)
 plt.ylim(0.0, 1.0)
+
+# Not that this may take a wee while to render due to the high resolution of the contour plot
+cbar = plt.colorbar(contour_all, label=r'Resting Period, $\tau$')
+cbar.set_ticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+plt.xlabel(r'Fertiliser Use, $F$')
+plt.ylabel(r'Critical Threshold, $S_{crit}(F,\tau)$')
 plt.tight_layout()
 plt.savefig("bifurcation_AUTO_tau_combined_contour.eps", bbox_inches='tight')
 plt.savefig("bifurcation_AUTO_tau_combined_contour.pdf", bbox_inches='tight')
+plt.show()
+
+# For the paper
+cbar = plt.colorbar(contour_all, label=r'Resting Period [yr]')
+cbar.set_ticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+plt.xlabel(r'Fertiliser Use [M/(ha$\cdot$yr)]')
+plt.ylabel(r'Soil Critical Threshold ($S_{crit}$)')
+plt.text(0.02, 0.93, r'(b)', transform=plt.gca().transAxes, fontsize=10)
+plt.tight_layout()
+plt.savefig("tipping_diagram.eps", bbox_inches='tight')
+plt.show()
+####################################
+# Scatter plot in the (F, tau) plane with color map representing S0
+plt.figure(figsize=(4, 2.5), dpi=180)
+scatter = plt.scatter(all_F, all_tau, c=all_S0, cmap='PiYG_r', s=1)
+#scatter.set_norm(LogNorm()) 
+cbar = plt.colorbar(scatter, label=r'Critical Threshold, $S_{crit}(F,\tau)$')
+cbar.set_ticks([0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+plt.plot(min_curve[:, 0], min_curve[:, 1], color='black', linewidth=1.5, linestyle='--', label='F_min boundary')
+plt.plot(max_curve[:, 0], max_curve[:, 1], color='black', linewidth=1.5, linestyle='--', label='F_max boundary')
+plt.xlabel(r'Fertiliser Use, $F$')
+plt.ylabel(r'Resting Period, $\tau$')
+plt.xlim(0, 3)
+plt.ylim(0.0, 1.0)
+plt.tight_layout()
+plt.show()
+####################################
+# Plot contour in a different projection: (x,y,z) -> (F, tau, S0)
+xi_new = np.linspace(0, 3, 300)
+yi_new = np.linspace(0.0, 1.0, 300)
+Xg_new, Yg_new = np.meshgrid(xi_new, yi_new)
+Zg_new = griddata((all_F, all_tau), all_S0, (Xg_new, Yg_new), method='linear')
+plt.figure(figsize=(4, 2.5), dpi=180)
+contour_all_new = plt.contourf(Xg_new, Yg_new, Zg_new, levels=100, cmap=cmap_color)
+cbar = plt.colorbar(contour_all_new, label=r'Critical Threshold, $S_{crit}(F,\tau)$')
+#plt.contour(Xg_all, Yg_all, Zg_all, levels=[0.2, 0.25,0.3,0.35], colors='black', linewidths=0.5)
+cbar.set_ticks([0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+plt.fill_betweenx(max_curve[:, 1], max_curve[:, 0], x2=3, color='palevioletred')
+plt.fill_between(min_curve[:, 0], min_curve[:, 1], 0.0, color='palevioletred')
+plt.plot(min_curve[:, 0], min_curve[:, 1], color='black', linewidth=1.5)
+plt.plot(max_curve[:, 0], max_curve[:, 1], color='black', linewidth=1.5)
+plt.xlabel(r'Fertiliser Use, $F$')
+plt.ylabel(r'Resting Period, $\tau$')
+plt.xlim(0, 3)
+plt.ylim(0.0, 1.0)
+plt.tight_layout()
 plt.show()
 ####################################
 t_values, S_nearby_values = load_time_S_blocks(auto_file_path + 's.nearby_all')
